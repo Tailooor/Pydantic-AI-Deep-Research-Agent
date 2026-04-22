@@ -1,87 +1,83 @@
 from __future__ import annotations
 
-from typing import Any
+import json
 
 import gradio as gr
 
-from app.agent import build_agent
 from app.config import get_settings
+from app.research import DeepResearchService
 
 
 CUSTOM_CSS = """
 .gradio-container {
-    max-width: 900px !important;
+    max-width: 1100px !important;
 }
 #app-shell {
-    border: 1px solid #d9e1d7;
-    border-radius: 24px;
+    border: 1px solid #d6ddd0;
+    border-radius: 26px;
     background:
-        radial-gradient(circle at top left, #eef7ea 0%, transparent 30%),
-        linear-gradient(180deg, #fbf8ef 0%, #f7f3e8 100%);
-    box-shadow: 0 20px 60px rgba(63, 74, 52, 0.08);
+        radial-gradient(circle at top left, #edf7e7 0%, transparent 28%),
+        radial-gradient(circle at bottom right, #f6ecd8 0%, transparent 26%),
+        linear-gradient(180deg, #f9f6ed 0%, #f3efe3 100%);
+    box-shadow: 0 22px 70px rgba(59, 71, 43, 0.08);
+}
+#report-box {
+    border-radius: 18px;
 }
 """
 
 
 def build_demo() -> gr.Blocks:
     settings = get_settings()
-    agent = build_agent(settings)
+    research_service = DeepResearchService(settings)
 
-    def chat(
-        message: str, chat_history: list[dict[str, Any]], model_history: list[Any]
-    ) -> tuple[list[dict[str, Any]], str, list[Any]]:
-        user_message = message.strip()
-        if not user_message:
-            return chat_history, "", model_history
+    def generate_report(user_input: str) -> tuple[str, str]:
+        cleaned_input = user_input.strip()
+        if not cleaned_input:
+            return "Please enter a stock ticker or research query.", "{}"
 
-        result = agent.run_sync(
-            user_message,
-            message_history=model_history or None,
-        )
-        reply = result.output.strip()
+        try:
+            run = research_service.run(cleaned_input)
+        except Exception as exc:
+            return f"Research failed: {exc}", "{}"
 
-        updated_chat = list(chat_history)
-        updated_chat.append({"role": "user", "content": user_message})
-        updated_chat.append({"role": "assistant", "content": reply})
-
-        return updated_chat, "", result.all_messages()
-
-    def clear_chat() -> tuple[list[Any], list[Any]]:
-        return [], []
+        plan_json = json.dumps(run.plan.model_dump(), indent=2)
+        return run.to_markdown(), plan_json
 
     with gr.Blocks(title=settings.app_title, fill_width=True) as demo:
         gr.Markdown(
             f"# {settings.app_title}\n"
-            f"Simple Pydantic AI agent using `{settings.openrouter_model}` through OpenRouter.\n"
-            "Responses are intentionally short."
+            f"Enter a stock ticker like `NVDA` or a free-text research question. "
+            f"The app uses DuckDuckGo for multi-step web discovery and `{settings.openrouter_model}` for planning and report writing."
         )
 
         with gr.Column(elem_id="app-shell"):
-            chatbot = gr.Chatbot(height=520, show_label=False, layout="bubble")
-            model_history = gr.State([])
+            prompt = gr.Textbox(
+                label="Research input",
+                placeholder="Examples: NVDA | Tesla competition and market positioning | AI infrastructure demand outlook",
+                lines=3,
+            )
 
             with gr.Row():
-                prompt = gr.Textbox(
-                    placeholder="Ask something...",
-                    lines=2,
-                    scale=8,
-                    show_label=False,
-                )
-                send = gr.Button("Send", variant="primary", scale=1)
+                run_button = gr.Button("Generate Report", variant="primary")
+                clear_button = gr.Button("Clear")
 
-            clear = gr.Button("Clear chat")
+            report = gr.Markdown(elem_id="report-box")
+            plan_view = gr.Code(label="Research plan", language="json")
 
-        send.click(
-            fn=chat,
-            inputs=[prompt, chatbot, model_history],
-            outputs=[chatbot, prompt, model_history],
-        )
-        prompt.submit(
-            fn=chat,
-            inputs=[prompt, chatbot, model_history],
-            outputs=[chatbot, prompt, model_history],
-        )
-        clear.click(fn=clear_chat, outputs=[chatbot, model_history])
+            gr.Examples(
+                examples=[
+                    ["NVDA"],
+                    ["MSFT"],
+                    ["AI infrastructure demand outlook 2026"],
+                    ["Open-source coding agents competitive landscape"],
+                ],
+                inputs=prompt,
+            )
+
+        run_button.click(fn=generate_report, inputs=prompt, outputs=[report, plan_view])
+        prompt.submit(fn=generate_report, inputs=prompt, outputs=[report, plan_view])
+        clear_button.click(fn=lambda: ("", "", "{}"), outputs=[prompt, report, plan_view])
 
     return demo
 

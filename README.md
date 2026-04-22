@@ -1,12 +1,13 @@
-## Simple Pydantic AI Agent
+## Deep Research Agent
 
-This project gives you a small chat app with:
+This project gives you a small deep research app with:
 
-- Pydantic AI for the agent
+- Pydantic AI for research planning and report writing
 - OpenRouter as the model provider
 - `openrouter/free` as the default model
+- DuckDuckGo for web research
 - Gradio as the frontend
-- Short answers by default
+- Structured research plans and detailed reports
 
 I used the OpenRouter setup pattern described in `llms-full.md`, including the `OpenRouterModel(...)` approach and `OPENROUTER_API_KEY` environment variable.
 
@@ -14,8 +15,11 @@ I used the OpenRouter setup pattern described in `llms-full.md`, including the `
 
 - `main.py` starts the app
 - `app/config.py` loads `.env` settings
-- `app/agent.py` creates the Pydantic AI agent
-- `app/ui.py` creates the Gradio chat UI
+- `app/agent.py` creates the Pydantic AI planner and writer agents
+- `app/duckduckgo.py` runs DuckDuckGo web searches
+- `app/research.py` orchestrates multi-step research
+- `app/schemas.py` defines structured outputs
+- `app/ui.py` creates the Gradio research UI
 - `.env` stores your local settings
 
 ## 1. Add Your API Key
@@ -27,7 +31,9 @@ OPENROUTER_API_KEY=your_openrouter_api_key_here
 OPENROUTER_MODEL=openrouter/free
 APP_HOST=127.0.0.1
 APP_PORT=7860
-APP_TITLE=Short Answer Agent
+APP_TITLE=Deep Research Agent
+DISCOVERY_RESULT_COUNT=5
+ANGLE_RESULT_COUNT=4
 ```
 
 ## 2. Install Dependencies
@@ -66,13 +72,28 @@ Open this in your browser:
 http://127.0.0.1:7860
 ```
 
-## How It Works
+## What The Agent Does
 
-- The app loads your key from `.env`
-- It creates a Pydantic AI `Agent`
-- The agent uses `OpenRouterModel("openrouter/free")`
-- The system instructions tell the agent to answer briefly
-- Gradio shows a simple chat interface
+1. It detects whether your input is likely a stock ticker or a general research query.
+2. It runs one DuckDuckGo discovery search.
+3. It uses those results to generate 3 to 4 non-overlapping research angles.
+4. It runs more DuckDuckGo searches for each angle.
+5. It writes a structured report with:
+
+- executive summary
+- subject profile
+- angle-by-angle findings
+- opportunities
+- risks
+- final take
+- source list
+
+## Example Inputs
+
+- `NVDA`
+- `MSFT`
+- `AI infrastructure demand outlook`
+- `Open-source coding agents competitive landscape`
 
 ## Notes
 

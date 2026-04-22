@@ -31,7 +31,9 @@ class Settings:
     openrouter_model: str = "openrouter/free"
     app_host: str = "127.0.0.1"
     app_port: int = 7860
-    app_title: str = "Short Answer Agent"
+    app_title: str = "Deep Research Agent"
+    discovery_result_count: int = 5
+    angle_result_count: int = 4
 
 
 def get_settings() -> Settings:
@@ -46,7 +48,9 @@ def get_settings() -> Settings:
     model = os.getenv("OPENROUTER_MODEL", "openrouter/free").strip() or "openrouter/free"
     host = os.getenv("APP_HOST", "127.0.0.1").strip() or "127.0.0.1"
     port = int(os.getenv("APP_PORT", "7860"))
-    title = os.getenv("APP_TITLE", "Short Answer Agent").strip() or "Short Answer Agent"
+    title = os.getenv("APP_TITLE", "Deep Research Agent").strip() or "Deep Research Agent"
+    discovery_result_count = int(os.getenv("DISCOVERY_RESULT_COUNT", "5"))
+    angle_result_count = int(os.getenv("ANGLE_RESULT_COUNT", "4"))
 
     return Settings(
         openrouter_api_key=api_key,
@@ -54,4 +58,6 @@ def get_settings() -> Settings:
         app_host=host,
         app_port=port,
         app_title=title,
+        discovery_result_count=discovery_result_count,
+        angle_result_count=angle_result_count,
     )
